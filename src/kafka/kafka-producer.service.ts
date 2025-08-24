@@ -1,16 +1,14 @@
 // src/kafka/kafka-producer.service.ts
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ClientKafka, ClientProxy, ClientProxyFactory } from '@nestjs/microservices';
-import { getKafkaConfig } from './kafka.config';
+import { Inject, Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
-export class KafkaProducerService implements OnModuleInit {
+export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(KafkaProducerService.name);
-    private kafkaClient: ClientKafka;
 
-    constructor() {
-        this.kafkaClient = ClientProxyFactory.create(getKafkaConfig()) as ClientKafka;
-    }
+    constructor(
+        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
+    ) { }
 
     async onModuleInit() {
         try {
@@ -23,11 +21,11 @@ export class KafkaProducerService implements OnModuleInit {
 
     async publishEvent(topic: string, message: any, key?: string) {
         try {
-            const result = await this.kafkaClient.emit(topic, {
+            const result = this.kafkaClient.emit(topic, {
                 key,
-                value: JSON.stringify(message),
+                value: message,
                 timestamp: Date.now(),
-            }).toPromise();
+            });
 
             this.logger.log(`Message published to topic: ${topic}`, { key, message });
             return result;
@@ -67,7 +65,11 @@ export class KafkaProducerService implements OnModuleInit {
     }
 
     async onModuleDestroy() {
-        await this.kafkaClient.close();
-        this.logger.log('Kafka producer connection closed');
+        try {
+            await this.kafkaClient.close();
+            this.logger.log('Kafka producer connection closed');
+        } catch (error) {
+            this.logger.error('Error closing Kafka connection', error);
+        }
     }
 }
