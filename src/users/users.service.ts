@@ -1,16 +1,21 @@
 import { HttpException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+
+// Import your DTOs
+import { CreateUserDto } from './dtos/CreateUser.dto';
+import { UpdateUserDto } from './dtos/UpdateUser.dto';
+
+interface UpdateUserSettingsData {
+    smsEnabled?: boolean;
+    notificationsOn?: boolean;
+}
 
 @Injectable()
 export class UsersService {
     constructor(private prisma: PrismaService) { }
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    createUser(data: Prisma.UserCreateInput) {
+    async createUser(data: CreateUserDto) {
         return this.prisma.user.create({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             data: {
                 ...data,
                 userSetting: {
@@ -20,14 +25,22 @@ export class UsersService {
                     },
                 },
             },
+            include: {
+                userSetting: true,
+            },
         });
     }
 
-    getUsers() {
-        return this.prisma.user.findMany({ include: { userSetting: true } });
+    async getUsers() {
+        return this.prisma.user.findMany({
+            include: {
+                userSetting: true,
+                posts: true,
+            }
+        });
     }
 
-    getUserById(id: number) {
+    async getUserById(id: number) {
         return this.prisma.user.findUnique({
             where: { id },
             include: {
@@ -44,36 +57,53 @@ export class UsersService {
 
     async deleteUserById(id: number) {
         const findUser = await this.getUserById(id);
-        if (!findUser) throw new HttpException('User not found', 404);
+        if (!findUser) {
+            throw new HttpException('User not found', 404);
+        }
         return this.prisma.user.delete({ where: { id } });
     }
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    async updateUserById(id: number, data: Prisma.UserUpdateInput) {
+    async updateUserById(id: number, data: UpdateUserDto) {
         const findUser = await this.getUserById(id);
-        if (!findUser) throw new HttpException('User Not Found', 404);
-
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
-        if (data.username) {
-            const findUser = await this.prisma.user.findUnique({
-                where: { username: data.username as string },
-            });
-            if (findUser) throw new HttpException('Username already taken', 400);
+        if (!findUser) {
+            throw new HttpException('User Not Found', 404);
         }
-        return this.prisma.user.update({ where: { id }, data });
+
+        // Check if username is being updated and if it's already taken
+        if (data.username && typeof data.username === 'string') {
+            const existingUser = await this.prisma.user.findUnique({
+                where: { username: data.username },
+            });
+            if (existingUser && existingUser.id !== id) {
+                throw new HttpException('Username already taken', 400);
+            }
+        }
+
+        return this.prisma.user.update({
+            where: { id },
+            data,
+            include: {
+                userSetting: true,
+                posts: true,
+            },
+        });
     }
 
     async updateUserSettings(
         userId: number,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
-        data: Prisma.UserSettingUpdateInput,
+        data: UpdateUserSettingsData,
     ) {
         const findUser = await this.getUserById(userId);
-        if (!findUser) throw new HttpException('User Not Found', 404);
-        if (!findUser.userSetting) throw new HttpException('No Settings', 400);
-        return this.prisma.userSetting.update({ where: { userId }, data });
+        if (!findUser) {
+            throw new HttpException('User Not Found', 404);
+        }
+        if (!findUser.userSetting) {
+            throw new HttpException('No Settings', 400);
+        }
+
+        return this.prisma.userSetting.update({
+            where: { userId },
+            data,
+        });
     }
 }

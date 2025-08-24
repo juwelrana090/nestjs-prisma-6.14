@@ -1,44 +1,150 @@
+// posts.service.ts
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { CreatePostDto } from './dtos/CreatePost.dto';
+import { CreateGroupPostDto } from './dtos/CreateGroupPost.dto';
 
 @Injectable()
 export class PostsService {
     constructor(private prisma: PrismaService) { }
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    createPost(userId: number, data: Prisma.PostCreateWithoutUserInput) {
+    async createPost(data: CreatePostDto) {
         return this.prisma.post.create({
             data: {
-                ...data,
-                userId,
+                title: data.title,
+                description: data.description,
+                userId: data.userId,
             },
-        });
-    }
-
-    createGroupPost(
-        userIds: number[],
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
-        data: Prisma.GroupPostCreateWithoutUsersInput,
-    ) {
-        return this.prisma.groupPost.create({
-            data: {
-                ...data,
-                users: {
-                    create: userIds.map((userId) => ({ userId })),
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        displayName: true,
+                    },
                 },
             },
         });
     }
 
-    getGroupPosts() {
+    async createGroupPost(data: CreateGroupPostDto) {
+        return this.prisma.groupPost.create({
+            data: {
+                title: data.title,
+                description: data.description,
+                users: {
+                    create: data.userIds.map((userId) => ({
+                        userId,
+                    })),
+                },
+            },
+            include: {
+                users: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                displayName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    async getGroupPosts() {
         return this.prisma.groupPost.findMany({
             include: {
                 users: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                displayName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    async getPosts() {
+        return this.prisma.post.findMany({
+            include: {
+                user: {
                     select: {
-                        user: true,
+                        id: true,
+                        username: true,
+                        displayName: true,
+                    },
+                },
+            },
+        });
+    }
+
+    async getPostById(id: number) {
+        return this.prisma.post.findUnique({
+            where: { id },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        displayName: true,
+                    },
+                },
+            },
+        });
+    }
+
+    async getGroupPostById(id: number) {
+        return this.prisma.groupPost.findUnique({
+            where: { id },
+            include: {
+                users: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                displayName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    async deletePost(id: number) {
+        return this.prisma.post.delete({
+            where: { id },
+        });
+    }
+
+    async deleteGroupPost(id: number) {
+        return this.prisma.groupPost.delete({
+            where: { id },
+        });
+    }
+
+    async updatePost(id: number, data: Partial<CreatePostDto>) {
+        return this.prisma.post.update({
+            where: { id },
+            data: {
+                ...(data.title && { title: data.title }),
+                ...(data.description && { description: data.description }),
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        displayName: true,
                     },
                 },
             },

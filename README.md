@@ -96,3 +96,68 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## prisma
+
+```bash
+# Install Prisma + dependencies
+
+npm install prisma --save-dev
+npm install @prisma/client
+
+# Initialize Prisma
+
+npx prisma init
+
+
+
+```
+
+## Setup Database
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/nestprisma"
+
+```
+
+```bash
+npx prisma migrate dev --name init
+
+nest g module prisma
+nest g service prisma
+
+```
+
+### To implement these changes:
+
+Update your schema.prisma with the provided schema
+Run migration:
+
+```bash
+npx prisma migrate dev --name add-posts-and-group-posts
+npx prisma generate
+```
+
+After any schema changes, run:
+
+```bash
+npx prisma db push
+npx prisma generate
+```
+
+### Update Prisma if needed:
+
+```bash
+npm install @prisma/client@6.14.0 prisma@6.14.0
+
+rm -rf node_modules/.prisma
+npx prisma generate
+
+npx prisma db push
+# or if you're using migrations:
+npx prisma migrate dev --name init
+npx prisma generate
+
+```
+
+more info https://chatgpt.com/share/68aaf4f7-0880-8000-8f8d-f0c8a0976389
