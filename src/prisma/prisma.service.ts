@@ -1,0 +1,38 @@
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '../generated/prisma';
+
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+    async onModuleInit() {
+        await this.$connect();
+        console.log('Connected to DB');
+    }
+    async onModuleDestroy() {
+        await this.$disconnect();
+        console.log('Disconnected from DB');
+    }
+}
+
+
+
+
+
+
+
+
+
+
+/*import { Injectable, OnModuleInit } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleInit {
+    async onModuleInit() {
+        try {
+            await this.$connect();
+            console.log('Connected to DB');
+        } catch (err) {
+            console.log(err);
+        }
+    }
+}*/

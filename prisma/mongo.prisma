@@ -1,0 +1,15 @@
+datasource mongo {
+    provider = "mongodb"
+    url      = env("MONGO_URL")
+}
+
+generator mongoClient {
+    provider = "prisma-client-js"
+    output   = "../src/generated/mongo" // 👈 custom client output
+}
+
+model Product {
+    id    String @id @map("_id")
+    name  String
+    price Float
+}
